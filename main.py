@@ -16,11 +16,22 @@ from puan_komutlari import puan_komutu, top_puanlar_komutu, puan_yardim_komutu
 from siralama_komutlari import siralama_komutu, siralama_oyun_secimi_callback, global_siralama_callback, yerel_siralama_callback, siralama_geri_callback
 from sessiz import sunucu_ol_sessiz_callback, kelime_gec_sessiz_callback, sunucu_istemiyorum_sessiz_callback, kelime_gor_sessiz_callback
 import os
+import signal
+import sys
 
 # Heroku için port ayarı
 PORT = int(os.environ.get('PORT', 5000))
 
+def signal_handler(signum, frame):
+    """Graceful shutdown için signal handler"""
+    print(f"\n🛑 Signal {signum} alındı, bot kapatılıyor...")
+    sys.exit(0)
+
 def create_app():
+    # Signal handler'ları kur
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
     # Optimize edilmiş timeout ayarları ile request objesi oluştur
     request = HTTPXRequest(
         read_timeout=TELEGRAM_READ_TIMEOUT,
@@ -146,4 +157,22 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run_polling()
+    try:
+        print("🚀 Tubidy Oyun Botu başlatılıyor...")
+        print("✅ Conflict hatalarını önlemek için güvenlik önlemleri aktif")
+        
+        # Bot'u başlat - conflict hatalarını önle
+        app.run_polling(
+            drop_pending_updates=True,  # Eski güncellemeleri at
+            allowed_updates=None,  # Tüm güncellemeleri kabul et
+            close_loop=False,  # Loop'u kapatma
+            timeout=30,  # Timeout'u azalt
+            read_timeout=30,  # Read timeout'u azalt
+            write_timeout=30,  # Write timeout'u azalt
+            connect_timeout=30  # Connect timeout'u azalt
+        )
+    except KeyboardInterrupt:
+        print("\n🛑 Bot kullanıcı tarafından durduruldu")
+    except Exception as e:
+        print(f"❌ Bot çalışırken hata oluştu: {e}")
+        sys.exit(1)
