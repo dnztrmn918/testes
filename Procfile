@@ -1,1 +1,1 @@
-worker: yukkimusic
+worker: python main.py
